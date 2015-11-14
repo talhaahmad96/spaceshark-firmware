@@ -39,8 +39,6 @@ void setup()
     servo_alt.attach(A4);
     servo_az.attach(A5);
     Particle.function("point_alt_az", point_alt_az);
-    Particle.function("point_alt", point_alt);
-    Particle.function("point_az", point_az);
     Particle.function("track_alt", track_alt);
     Particle.function("track_az", track_az);
 }
@@ -138,22 +136,6 @@ int point_alt_az(String posString)
     String posString_az = posString.substring(sepIndex+1);
     posVal_sky_alt = posString_alt.toFloat();
     posVal_sky_az = posString_az.toFloat();
-    float now = millis();
-    lastUpdate_alt = now;
-    return 0;
-}
-
-int point_alt(String pos)
-{
-    posVal_sky_alt = pos.toFloat();
-    float now = millis();
-    lastUpdate_alt = now;
-    return 0;
-}
-
-int point_az(String pos)
-{
-    posVal_sky_az = pos.toFloat();
     float now = millis();
     lastUpdate_alt = now;
     return 0;
