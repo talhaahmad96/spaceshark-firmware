@@ -1,5 +1,12 @@
 // Space Shark microcontroller firmware for Particle Photon
 // See project pages at http://github.com/spaceshark
+#include "TinyStepper_28BYJ_48.h"
+
+// Define stepper motor pin connections
+const int MOTOR_IN1_PIN = 1;
+const int MOTOR_IN2_PIN = 2;
+const int MOTOR_IN3_PIN = 3;
+const int MOTOR_IN4_PIN = 4;
 
 
 // Constant values defining the value ranges for the alt-az coordinate system:
@@ -10,10 +17,12 @@ const float az_max = 360.0;
 
 // Create servo motor instances:
 Servo servo_alt;
-Servo servo_az;
+TinyStepper_28BYJ_48 stepper_az;
 // These are used to track how long ago each motor had its pointing updated:
 float lastUpdate_alt = millis();
 float lastUpdate_az = millis();
+
+float stepper_pos = 0;
 
 // The following values are particular to the hardware. Every servo motor is
 // a bit different, so the alt and az motors need to be calibrated for their
@@ -24,8 +33,8 @@ float lastUpdate_az = millis();
 // nudging these limits either side of their nominal values.
 const float limit_alt_lo = 103.0; // Nominally 90.0
 const float limit_alt_hi = 9.0;   // Nominally 0.0
-const float limit_az_lo = 90.0;   // Nominally 0.0
-const float limit_az_hi = 160.0;  // Nominally 360.0
+const float limit_az_lo = 0;   // Nominally 0.0
+const float limit_az_hi = 2048;  // Nominally 360.0
 
 // Set the intial pointing and track rate to use when the Shark is powered on:
 float posVal_sky_alt = 0.0; // 0 degrees is horizon, 90 degrees is zenith
@@ -37,7 +46,8 @@ void setup()
 {
     // Define servo output pins and register cloud functions:
     servo_alt.attach(A4);
-    servo_az.attach(A5);
+    stepper_az.connectToPins(MOTOR_IN1_PIN, MOTOR_IN2_PIN, MOTOR_IN3_PIN, MOTOR_IN4_PIN);
+
     Particle.function("point_alt_az", point_alt_az);
     Particle.function("track_alt", track_alt);
     Particle.function("track_az", track_az);
@@ -70,7 +80,7 @@ void update_pointing()
     {
         posVal_sky_alt = posVal_sky_alt + 0;
     }
-    
+
     if (trackRate_az > 0)
     {
         float now = millis();
@@ -95,7 +105,13 @@ int set_pos(float alt, float az)
     float posVal_servo_alt = convert_alt(posVal_sky_alt);
     float posVal_servo_az = convert_az(posVal_sky_az);
     servo_alt.write(posVal_servo_alt);
-    servo_az.write(posVal_servo_az);
+
+    stepper_az.setSpeedInStepsPerSecond(156);
+    stepper_az.setAccelerationInStepsPerSecondPerSecond(512);
+    //float posVal_servo_az_Steps = posVal_servo_az*2048/360;
+    float diff_move = stepper_pos- posVal_servo_az;
+    stepper_az.moveRelativeInSteps(diff_move);
+    stepper_pos = posVal_servo_az;
     return 0;
 }
 
@@ -124,7 +140,7 @@ float sky_to_servo(
     if (sky > sky_max)
         return sky_max;
     float scale = (sky-sky_min) / (sky_max-sky_min);
-  
+
     return scale * (servo_limit_hi - servo_limit_lo) + servo_limit_lo;
 }
 
