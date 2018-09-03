@@ -42,6 +42,9 @@ float posVal_sky_az = 0.0;  // 0 degrees is north, 90 degrees is east
 float trackRate_alt = 0.0;  // in degrees per second
 float trackRate_az = 0.0;   // in degrees per second
 
+int optoInt_Val = 0;
+bool hasHomed = false;
+
 void setup()
 {
     // Define servo output pins and register cloud functions:
@@ -51,15 +54,42 @@ void setup()
     Particle.function("point_alt_az", point_alt_az);
     Particle.function("track_alt", track_alt);
     Particle.function("track_az", track_az);
+    Serial.begin(9600);
+    pinMode(D7,OUTPUT);
+    pinMode(A0,INPUT);
+
 }
+
 
 void loop()
 {
-    // This is the main loop, which never stops updating the pointning angles
-    // based on the current tracking rate.
-    update_pointing();
-    set_pos(posVal_sky_alt, posVal_sky_az);
-    delay(50);
+    if (hasHomed == true)
+    {
+      // This is the main loop, which never stops updating the pointning angles
+      // based on the current tracking rate.
+      update_pointing();
+      set_pos(posVal_sky_alt, posVal_sky_az);
+      delay(50);
+    }
+    else
+    {
+      optoInt_Val = analogRead(A0);
+      Serial.println(optoInt_Val);
+      if (optoInt_Val <= 1000)
+      {
+        hasHomed = true;
+      }
+      else
+      {
+        signed int x;
+        x = -64;
+        stepper_az.setSpeedInStepsPerSecond(2048);
+        stepper_az.setAccelerationInStepsPerSecondPerSecond(256);
+        stepper_az.moveRelativeInSteps(x);
+
+      }
+      //delay(5);
+    }
 }
 
 void update_pointing()
